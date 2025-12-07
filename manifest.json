@@ -4,8 +4,7 @@
   "version": "1.0.0",
   "description": "Export transcription and summary from Fathom video calls to n8n webhook",
   "permissions": [
-    "activeTab",
-    "storage"
+    "activeTab"
   ],
   "host_permissions": [
     "https://fathom.video/*"

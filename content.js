@@ -75,11 +75,16 @@
     }
 
     // If no transcript found, try to find all text blocks that might be transcription
+    // Limit scope to main content areas to avoid including navigation, headers, etc.
     if (!transcription) {
-      const textBlocks = document.querySelectorAll('p, div[class*="text"], span[class*="text"]');
+      const mainContent = document.querySelector('main, [role="main"], #content, .content');
+      const searchScope = mainContent || document.body;
+      
+      const textBlocks = searchScope.querySelectorAll('p, div[class*="text"], span[class*="text"]');
       const possibleTranscript = Array.from(textBlocks)
         .map(el => el.innerText)
-        .filter(text => text && text.length > 50)
+        .filter(text => text && text.length > 50 && text.length < 10000) // Filter out very short or very long blocks
+        .slice(0, 50) // Limit to first 50 blocks to avoid too much data
         .join('\n\n');
       
       if (possibleTranscript) {
@@ -120,6 +125,18 @@
       return;
     }
 
+    // Validate webhook URL format
+    try {
+      new URL(webhookUrl);
+      if (!webhookUrl.startsWith('http://') && !webhookUrl.startsWith('https://')) {
+        alert('Invalid webhook URL: must start with http:// or https://');
+        return;
+      }
+    } catch (error) {
+      alert('Invalid webhook URL format');
+      return;
+    }
+
     const button = document.getElementById('fathom-export-button');
     const originalText = button.textContent;
     
@@ -130,7 +147,13 @@
       // Extract data
       const transcription = extractTranscription();
       const summary = extractSummary();
-      const recordingId = window.location.pathname.split('/share/')[1];
+      
+      // Validate recordingId exists
+      const pathParts = window.location.pathname.split('/share/');
+      if (pathParts.length < 2 || !pathParts[1]) {
+        throw new Error('Invalid Fathom share URL: missing recording ID');
+      }
+      const recordingId = pathParts[1];
       const url = window.location.href;
 
       const payload = {
@@ -143,14 +166,20 @@
 
       button.textContent = 'Sending...';
 
-      // Send to webhook
+      // Send to webhook with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         button.textContent = '✓ Sent!';
@@ -167,7 +196,15 @@
       console.error('Error sending to webhook:', error);
       button.textContent = '✗ Error';
       button.style.backgroundColor = '#ef4444';
-      alert('Failed to send data to webhook. Check console for details.');
+      
+      let errorMessage = 'Failed to send data to webhook.';
+      if (error.name === 'AbortError') {
+        errorMessage = 'Request timed out. Please try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      alert(errorMessage + ' Check console for details.');
       setTimeout(() => {
         button.textContent = originalText;
         button.style.backgroundColor = '';

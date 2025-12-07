@@ -1,6 +1,9 @@
 # Webhook configuration (security)
 webhook-config.js
 
+# Test files
+test-page.html
+
 # Node modules
 node_modules/
 
