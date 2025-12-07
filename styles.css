@@ -1,3 +1,10 @@
+/* Background gradient */
+body {
+  background: -webkit-linear-gradient(top, rgb(26, 22, 46), rgb(58, 22, 68), rgb(26, 22, 46));
+  background: linear-gradient(to bottom, rgb(26, 22, 46), rgb(58, 22, 68), rgb(26, 22, 46));
+  min-height: 100vh;
+}
+
 /* Styles for the Fathom export button */
 .fathom-export-btn {
   position: fixed;
@@ -6,7 +13,7 @@
   z-index: 9999;
   
   padding: 12px 24px;
-  background-color: #3b82f6;
+  background: linear-gradient(45deg, rgb(142, 55, 215), rgb(107, 141, 214), rgb(102, 126, 234));
   color: white;
   border: none;
   border-radius: 8px;
@@ -20,7 +27,7 @@
 }
 
 .fathom-export-btn:hover {
-  background-color: #2563eb;
+  background: linear-gradient(45deg, rgb(162, 75, 235), rgb(127, 161, 234), rgb(122, 146, 254));
   box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
   transform: translateY(-2px);
 }
