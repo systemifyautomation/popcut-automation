@@ -2,6 +2,13 @@
 (function() {
   'use strict';
 
+  // Configuration constants
+  const MIN_TEXT_LENGTH = 50;
+  const MAX_TEXT_LENGTH = 10000;
+  const MAX_TEXT_BLOCKS = 50;
+  const WEBHOOK_TIMEOUT_MS = 30000;
+  const BUTTON_FEEDBACK_DURATION_MS = 2000;
+
   // Load webhook configuration
   let webhookUrl = null;
   
@@ -83,8 +90,8 @@
       const textBlocks = searchScope.querySelectorAll('p, div[class*="text"], span[class*="text"]');
       const possibleTranscript = Array.from(textBlocks)
         .map(el => el.innerText)
-        .filter(text => text && text.length > 50 && text.length < 10000) // Filter out very short or very long blocks
-        .slice(0, 50) // Limit to first 50 blocks to avoid too much data
+        .filter(text => text && text.length > MIN_TEXT_LENGTH && text.length < MAX_TEXT_LENGTH)
+        .slice(0, MAX_TEXT_BLOCKS)
         .join('\n\n');
       
       if (possibleTranscript) {
@@ -138,6 +145,11 @@
     }
 
     const button = document.getElementById('fathom-export-button');
+    if (!button) {
+      console.error('Export button not found');
+      return;
+    }
+    
     const originalText = button.textContent;
     
     try {
@@ -168,7 +180,7 @@
 
       // Send to webhook with timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
 
       const response = await fetch(webhookUrl, {
         method: 'POST',
@@ -188,7 +200,7 @@
           button.textContent = originalText;
           button.style.backgroundColor = '';
           button.disabled = false;
-        }, 2000);
+        }, BUTTON_FEEDBACK_DURATION_MS);
       } else {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -209,7 +221,7 @@
         button.textContent = originalText;
         button.style.backgroundColor = '';
         button.disabled = false;
-      }, 2000);
+      }, BUTTON_FEEDBACK_DURATION_MS);
     }
   }
 
