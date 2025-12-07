@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Fathom Video Exporter",
+  "version": "1.0.0",
+  "description": "Export transcription and summary from Fathom video calls to n8n webhook",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://fathom.video/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://fathom.video/share/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["webhook-config.js"],
+      "matches": ["https://fathom.video/*"]
+    }
+  ]
+}
