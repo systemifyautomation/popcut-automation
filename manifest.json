@@ -9,21 +9,19 @@
   "host_permissions": [
     "https://fathom.video/*"
   ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Fathom Video Exporter"
+  },
   "content_scripts": [
     {
-      "matches": ["https://fathom.video/share/*"],
+      "matches": ["https://fathom.video/*"],
       "js": ["content.js"],
-      "css": ["styles.css"],
       "run_at": "document_idle"
     }
   ],
   "background": {
     "service_worker": "background.js"
-  },
-  "icons": {
-    "16": "icon16.png",
-    "48": "icon48.png",
-    "128": "icon128.png"
   },
   "web_accessible_resources": [
     {

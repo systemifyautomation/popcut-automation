@@ -7,7 +7,6 @@
   const MAX_TEXT_LENGTH = 10000;
   const MAX_TEXT_BLOCKS = 50;
   const WEBHOOK_TIMEOUT_MS = 30000;
-  const BUTTON_FEEDBACK_DURATION_MS = 2000;
 
   // Load webhook configuration
   let webhookUrl = null;
@@ -31,34 +30,6 @@
     } catch (error) {
       console.error('Error loading webhook config:', error);
     }
-  }
-
-  // Wait for page to be fully loaded
-  function waitForElement(selector, timeout = 10000) {
-    return new Promise((resolve, reject) => {
-      const element = document.querySelector(selector);
-      if (element) {
-        return resolve(element);
-      }
-
-      const observer = new MutationObserver((mutations) => {
-        const element = document.querySelector(selector);
-        if (element) {
-          observer.disconnect();
-          resolve(element);
-        }
-      });
-
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true
-      });
-
-      setTimeout(() => {
-        observer.disconnect();
-        reject(new Error('Element not found within timeout'));
-      }, timeout);
-    });
   }
 
   // Extract transcription from the page
@@ -128,161 +99,90 @@
   // Send data to webhook
   async function sendToWebhook() {
     if (!webhookUrl) {
-      alert('Webhook URL not configured. Please create webhook-config.js from webhook-config.example.js');
-      return;
+      throw new Error('Webhook URL not configured. Please create webhook-config.js from webhook-config.example.js');
     }
 
     // Validate webhook URL format
     try {
       new URL(webhookUrl);
       if (!webhookUrl.startsWith('http://') && !webhookUrl.startsWith('https://')) {
-        alert('Invalid webhook URL: must start with http:// or https://');
-        return;
+        throw new Error('Invalid webhook URL: must start with http:// or https://');
       }
     } catch (error) {
-      alert('Invalid webhook URL format');
-      return;
+      throw new Error('Invalid webhook URL format');
     }
 
-    const button = document.getElementById('fathom-export-button');
-    if (!button) {
-      console.error('Export button not found');
-      return;
-    }
+    // Extract data
+    const transcription = extractTranscription();
+    const summary = extractSummary();
     
-    const originalText = button.textContent;
+    // Get recording info from URL
+    const url = window.location.href;
+    let recordingId = 'unknown';
     
-    try {
-      button.textContent = 'Extracting...';
-      button.disabled = true;
-
-      // Extract data
-      const transcription = extractTranscription();
-      const summary = extractSummary();
-      
-      // Validate recordingId exists
-      const pathParts = window.location.pathname.split('/share/');
-      if (pathParts.length < 2 || !pathParts[1]) {
-        throw new Error('Invalid Fathom share URL: missing recording ID');
-      }
-      const recordingId = pathParts[1];
-      const url = window.location.href;
-
-      const payload = {
-        recordingId,
-        url,
-        transcription,
-        summary,
-        timestamp: new Date().toISOString()
-      };
-
-      button.textContent = 'Sending...';
-
-      // Send to webhook with timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
-
-      const response = await fetch(webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (response.ok) {
-        button.textContent = '✓ Sent!';
-        button.style.backgroundColor = '#10b981';
-        setTimeout(() => {
-          button.textContent = originalText;
-          button.style.backgroundColor = '';
-          button.disabled = false;
-        }, BUTTON_FEEDBACK_DURATION_MS);
-      } else {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-    } catch (error) {
-      console.error('Error sending to webhook:', error);
-      button.textContent = '✗ Error';
-      button.style.backgroundColor = '#ef4444';
-      
-      let errorMessage = 'Failed to send data to webhook.';
-      if (error.name === 'AbortError') {
-        errorMessage = 'Request timed out. Please try again.';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-      
-      alert(errorMessage + ' Check console for details.');
-      setTimeout(() => {
-        button.textContent = originalText;
-        button.style.backgroundColor = '';
-        button.disabled = false;
-      }, BUTTON_FEEDBACK_DURATION_MS);
+    // Try to extract recording ID from various URL patterns
+    const pathParts = window.location.pathname.split('/');
+    if (pathParts.length > 2) {
+      recordingId = pathParts[pathParts.length - 1] || pathParts[pathParts.length - 2];
     }
+
+    const payload = {
+      recordingId,
+      url,
+      transcription,
+      summary,
+      timestamp: new Date().toISOString()
+    };
+
+    // Send to webhook with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
+
+    const response = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    return { success: true };
   }
 
-  // Create and inject the export button
-  function createExportButton() {
-    // Check if button already exists
-    if (document.getElementById('fathom-export-button')) {
-      return;
+  // Listen for messages from popup
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'extractAndSend') {
+      // Handle async operation
+      sendToWebhook()
+        .then(result => {
+          sendResponse(result);
+        })
+        .catch(error => {
+          console.error('Error in extraction:', error);
+          sendResponse({ 
+            success: false, 
+            error: error.message || 'Unknown error occurred' 
+          });
+        });
+      
+      // Return true to indicate we'll send response asynchronously
+      return true;
     }
-
-    const button = document.createElement('button');
-    button.id = 'fathom-export-button';
-    button.className = 'fathom-export-btn';
-    button.textContent = 'Export to n8n';
-    button.title = 'Send transcription and summary to n8n webhook';
-    
-    button.addEventListener('click', sendToWebhook);
-
-    // Try to inject button in a good location
-    // Look for header or control panel
-    const possibleLocations = [
-      document.querySelector('header'),
-      document.querySelector('[class*="header"]'),
-      document.querySelector('[class*="control"]'),
-      document.querySelector('[class*="toolbar"]'),
-      document.body
-    ];
-
-    for (const location of possibleLocations) {
-      if (location) {
-        location.appendChild(button);
-        console.log('Export button injected successfully');
-        break;
-      }
-    }
-  }
+  });
 
   // Initialize the extension
   async function init() {
-    // Check if we're on a Fathom share page
-    if (!window.location.pathname.startsWith('/share/')) {
-      console.log('Not on a Fathom share page, extension inactive');
-      return;
-    }
-
-    console.log('Fathom Video Exporter: Initializing...');
+    console.log('Fathom Video Exporter: Content script loaded');
     
     // Load webhook configuration
     await loadWebhookConfig();
-
-    // Wait for page to be ready
-    try {
-      await waitForElement('body');
-      
-      // Wait a bit for dynamic content to load
-      setTimeout(() => {
-        createExportButton();
-      }, 2000);
-    } catch (error) {
-      console.error('Error initializing extension:', error);
-    }
   }
 
   // Run initialization
@@ -292,3 +192,4 @@
     init();
   }
 })();
+
