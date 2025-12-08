@@ -3,16 +3,53 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fathom Video Exporter</title>
+  <title>Popcut AI Matchmaker</title>
   <link rel="stylesheet" href="popup-styles.css">
 </head>
 <body>
   <div class="popup-container">
-    <h1>Fathom Video Exporter</h1>
+    <h1>Popcut AI Matchmaker</h1>
+    <div class="video-info" id="videoInfo">
+      <p class="video-title" id="videoTitle">Loading...</p>
+    </div>
     <p class="status-text" id="statusText">Ready to export</p>
     <button id="startMatchingBtn" class="start-matching-btn">Start Matching</button>
+    <div class="button-group">
+      <button id="talkToAiBtn" class="action-btn talk-btn">Talk to the AI</button>
+      <button id="trainAiBtn" class="action-btn train-btn">Train the AI</button>
+    </div>
+    
+    <!-- Training Interface -->
+    <div class="training-interface" id="trainingInterface" style="display: none;">
+      <div class="training-header">
+        <h2>Train the AI</h2>
+        <button id="closeTrainingBtn" class="close-btn">×</button>
+      </div>
+      <textarea id="instructionInput" class="instruction-input" placeholder="Enter AI training instructions..."></textarea>
+      <div class="training-actions">
+        <button id="submitInstructionBtn" class="submit-instruction-btn">Submit Instruction</button>
+        <a href="https://docs.google.com/spreadsheets/d/1-EZzrxsueIHSfqZwDA0dGlHAB3fE3GTdsoD5lELKl20/edit?usp=sharing" target="_blank" id="viewInstructionsBtn" class="view-instructions-btn">View All Instructions</a>
+      </div>
+    </div>
+    
+    <!-- Results Display -->
+    <div class="results-container" id="resultsContainer" style="display: none;">
+      <div class="results-header">
+        <h2>Top Matches</h2>
+        <button id="closeResultsBtn" class="close-btn">×</button>
+      </div>
+      <div class="results-list" id="resultsList"></div>
+    </div>
+    
     <div class="message" id="message"></div>
+    <div class="footer">
+      <p class="footer-text">© 2025 <a href="https://systemifyautomation.com" target="_blank" class="made-by">Made by Systemify Automation</a></p>
+    </div>
   </div>
+  <script src="config.js"></script>
+  <script src="extractors.js"></script>
+  <script src="ui-helpers.js"></script>
+  <script src="event-handlers.js"></script>
   <script src="popup.js"></script>
 </body>
 </html>

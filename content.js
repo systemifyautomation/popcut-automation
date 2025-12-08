@@ -8,29 +8,53 @@
   const MAX_TEXT_BLOCKS = 50;
   const WEBHOOK_TIMEOUT_MS = 30000;
 
-  // Load webhook configuration
-  let webhookUrl = null;
+  // Load webhook URL from config
+  let WEBHOOK_URL = '';
+  let TRAINING_WEBHOOK_URL = '';
   
-  // Try to load the webhook config
-  async function loadWebhookConfig() {
-    try {
-      // Import the config if it exists
-      const script = document.createElement('script');
-      script.src = chrome.runtime.getURL('webhook-config.js');
-      script.onload = function() {
-        if (window.WEBHOOK_CONFIG && window.WEBHOOK_CONFIG.url) {
-          webhookUrl = window.WEBHOOK_CONFIG.url;
-          console.log('Webhook config loaded successfully');
-        }
-      };
-      script.onerror = function() {
-        console.warn('webhook-config.js not found. Please create it from webhook-config.example.js');
-      };
-      document.head.appendChild(script);
-    } catch (error) {
-      console.error('Error loading webhook config:', error);
-    }
+  async function loadConfig() {
+    const script = document.createElement('script');
+    script.src = chrome.runtime.getURL('config.js');
+    script.onload = () => {
+      if (typeof CONFIG !== 'undefined') {
+        WEBHOOK_URL = CONFIG.WEBHOOK_URL;
+        TRAINING_WEBHOOK_URL = CONFIG.TRAINING_WEBHOOK_URL;
+      }
+    };
+    document.head.appendChild(script);
   }
+  
+  loadConfig();
+
+  // Listen for messages from popup
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.action === 'submitTrainingInstruction') {
+      // Send training instruction to webhook
+      fetch(TRAINING_WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          instruction: request.instruction,
+          timestamp: request.timestamp,
+          type: 'training'
+        })
+      })
+      .then(response => {
+        if (response.ok) {
+          sendResponse({ success: true });
+        } else {
+          sendResponse({ success: false, error: `HTTP error! status: ${response.status}` });
+        }
+      })
+      .catch(error => {
+        sendResponse({ success: false, error: error.message });
+      });
+      
+      return true; // Keep the message channel open for async response
+    }
+  });
 
   // Extract transcription from the page
   function extractTranscription() {
@@ -98,14 +122,10 @@
 
   // Send data to webhook
   async function sendToWebhook() {
-    if (!webhookUrl) {
-      throw new Error('Webhook URL not configured. Please create webhook-config.js from webhook-config.example.js');
-    }
-
     // Validate webhook URL format
     try {
-      new URL(webhookUrl);
-      if (!webhookUrl.startsWith('http://') && !webhookUrl.startsWith('https://')) {
+      new URL(WEBHOOK_URL);
+      if (!WEBHOOK_URL.startsWith('http://') && !WEBHOOK_URL.startsWith('https://')) {
         throw new Error('Invalid webhook URL: must start with http:// or https://');
       }
     } catch (error) {
@@ -138,7 +158,7 @@
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
 
-    const response = await fetch(webhookUrl, {
+    const response = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -179,10 +199,7 @@
 
   // Initialize the extension
   async function init() {
-    console.log('Fathom Video Exporter: Content script loaded');
-    
-    // Load webhook configuration
-    await loadWebhookConfig();
+    console.log('Popcut AI Matchmaker: Content script loaded');
   }
 
   // Run initialization

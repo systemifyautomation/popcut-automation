@@ -1,17 +1,30 @@
 {
   "manifest_version": 3,
-  "name": "Fathom Video Exporter",
+  "name": "Popcut AI Matchmaker",
   "version": "1.0.0",
-  "description": "Export transcription and summary from Fathom video calls to n8n webhook",
+  "description": "AI-powered matchmaking for Popcut from Fathom video calls",
   "permissions": [
-    "activeTab"
+    "activeTab",
+    "scripting"
   ],
   "host_permissions": [
-    "https://fathom.video/*"
+    "https://fathom.video/*",
+    "https://n8n.systemify.net/*",
+    "<all_urls>"
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "Fathom Video Exporter"
+    "default_title": "Popcut AI Matchmaker",
+    "default_icon": {
+      "16": "icon16.png",
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
   },
   "content_scripts": [
     {
@@ -25,8 +38,8 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["webhook-config.js"],
-      "matches": ["https://fathom.video/*"]
+      "resources": ["config.js"],
+      "matches": ["<all_urls>"]
     }
   ]
 }

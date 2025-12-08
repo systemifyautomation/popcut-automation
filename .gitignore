@@ -1,5 +1,6 @@
 # Webhook configuration (security)
 webhook-config.js
+config.js
 
 # Test files
 test-page.html

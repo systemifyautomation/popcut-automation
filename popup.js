@@ -1,85 +1,81 @@
-// Popup script for Fathom Video Exporter
+// Popup script for Popcut AI Matchmaker
 (function() {
   'use strict';
 
-  const startBtn = document.getElementById('startMatchingBtn');
-  const statusText = document.getElementById('statusText');
-  const messageDiv = document.getElementById('message');
-
-  // Show message to user
-  function showMessage(text, type = 'info') {
-    messageDiv.textContent = text;
-    messageDiv.className = `message show ${type}`;
-    
-    setTimeout(() => {
-      messageDiv.classList.remove('show');
-    }, 5000);
-  }
-
-  // Update status text
-  function updateStatus(text, color = 'rgba(255, 255, 255, 0.8)') {
-    statusText.textContent = text;
-    statusText.style.color = color;
-  }
-
-  // Check if current tab is a Fathom website
-  async function checkFathomSite() {
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      
-      if (!tab || !tab.url) {
-        return false;
-      }
-
-      return tab.url.includes('fathom.video');
-    } catch (error) {
-      console.error('Error checking current site:', error);
-      return false;
-    }
-  }
+  // Get webhook URLs from config
+  const WEBHOOK_URL = (typeof CONFIG !== 'undefined' && CONFIG.WEBHOOK_URL) || '';
+  const TRAINING_WEBHOOK_URL = (typeof CONFIG !== 'undefined' && CONFIG.TRAINING_WEBHOOK_URL) || '';
+  
+  // Cache for extracted data
+  let cachedData = {
+    title: null,
+    summary: null,
+    transcription: null,
+    url: null
+  };
 
   // Initialize popup
   async function initialize() {
     const isFathomSite = await checkFathomSite();
     
     if (!isFathomSite) {
+      const startBtn = document.getElementById('startMatchingBtn');
+      const talkToAiBtn = document.getElementById('talkToAiBtn');
+      const videoTitle = document.getElementById('videoTitle');
+      
       startBtn.disabled = true;
-      updateStatus('Please navigate to a Fathom video page', '#fca5a5');
-      showMessage('This extension only works on fathom.video', 'error');
+      talkToAiBtn.disabled = true;
+      // trainAiBtn remains enabled - works on any site
+      videoTitle.textContent = 'Not on Fathom page';
+      videoTitle.style.color = '#fca5a5';
+      updateStatus('Train AI available on any site', '#93c5fd');
       return;
     }
 
-    updateStatus('Ready to export', '#86efac');
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    // Cache the URL
+    cachedData.url = tab.url;
+    
+    // Extract and display the video title
+    updateStatus('Extracting title...', '#93c5fd');
+    const title = await extractTitle(tab.id);
+    document.getElementById('videoTitle').textContent = title;
+    cachedData.title = title;
+    
+    // Extract summary in background
+    updateStatus('Extracting summary...', '#93c5fd');
+    try {
+      const summary = await extractSummary(tab.id);
+      cachedData.summary = summary;
+    } catch (error) {
+      console.error('Failed to extract summary:', error);
+      cachedData.summary = 'Error extracting summary';
+    }
+    
+    // Extract transcription in background
+    updateStatus('Extracting transcription...', '#93c5fd');
+    const transcription = await extractTranscription(tab.id);
+    cachedData.transcription = transcription;
+    
+    updateStatus('Ready to export (data cached)', '#86efac');
+    console.log('Cached data ready:', {
+      title: cachedData.title,
+      summaryLength: cachedData.summary?.length || 0,
+      transcriptionLength: cachedData.transcription?.length || 0
+    });
   }
 
-  // Handle start matching button click
-  startBtn.addEventListener('click', async () => {
-    try {
-      startBtn.disabled = true;
-      updateStatus('Extracting data...', '#93c5fd');
+  // Set up event listeners
+  document.getElementById('startMatchingBtn').addEventListener('click', () => {
+    handleStartMatching(cachedData, WEBHOOK_URL);
+  });
 
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-
-      // Send message to content script to start extraction
-      const response = await chrome.tabs.sendMessage(tab.id, { action: 'extractAndSend' });
-
-      if (response && response.success) {
-        updateStatus('Success!', '#86efac');
-        showMessage('Data exported successfully!', 'success');
-      } else {
-        updateStatus('Export failed', '#fca5a5');
-        showMessage(response?.error || 'Failed to export data', 'error');
-      }
-    } catch (error) {
-      console.error('Error during extraction:', error);
-      updateStatus('Error occurred', '#fca5a5');
-      showMessage('Error: ' + error.message, 'error');
-    } finally {
-      setTimeout(() => {
-        startBtn.disabled = false;
-        updateStatus('Ready to export', 'rgba(255, 255, 255, 0.8)');
-      }, 2000);
-    }
+  document.getElementById('talkToAiBtn').addEventListener('click', handleTalkToAI);
+  document.getElementById('trainAiBtn').addEventListener('click', handleTrainAI);
+  document.getElementById('closeTrainingBtn').addEventListener('click', handleCloseTraining);
+  document.getElementById('submitInstructionBtn').addEventListener('click', () => {
+    handleSubmitInstruction(TRAINING_WEBHOOK_URL);
   });
 
   // Initialize when popup opens
