@@ -16,22 +16,42 @@
 
   // Initialize popup
   async function initialize() {
-    const isFathomSite = await checkFathomSite();
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const fathomIdInput = document.getElementById('fathomIdInput');
     
-    if (!isFathomSite) {
-      const startBtn = document.getElementById('startMatchingBtn');
-      const talkToAiBtn = document.getElementById('talkToAiBtn');
-      const videoTitle = document.getElementById('videoTitle');
-      
-      startBtn.disabled = true;
-      talkToAiBtn.disabled = true;
-      // trainAiBtn remains enabled - works on any site
-      videoTitle.textContent = 'Not on Fathom page';
-      videoTitle.style.color = '#fca5a5';
-      updateStatus('Train AI available on any site', '#93c5fd');
-      return;
+    // Check if we're on a Fathom page
+    if (tab && tab.url && tab.url.includes('fathom.video')) {
+      // Extract Fathom ID from URL and auto-fill
+      const fathomId = extractFathomId(tab.url);
+      if (fathomId) {
+        fathomIdInput.value = fathomId;
+        updateStatus('Fathom ID auto-filled', '#86efac');
+        
+        // Cache the URL
+        cachedData.url = tab.url;
+        
+        // Auto-extract data from current page
+        await extractDataFromPage(tab.id);
+      }
+    } else {
+      updateStatus('Ready - enter Fathom ID to start', '#93c5fd');
     }
-
+  }
+  
+  // Extract Fathom ID from URL
+  function extractFathomId(url) {
+    try {
+      // Match patterns like: fathom.video/share/abcd1234 or https://app.fathom.video/call/abcd1234
+      const match = url.match(/fathom\.video\/(?:share|call)\/([a-zA-Z0-9-]+)/);
+      return match ? match[1] : null;
+    } catch (error) {
+      console.error('Error extracting Fathom ID:', error);
+      return null;
+    }
+  }
+  
+  // Extract data from current Fathom page
+  async function extractDataFromPage(tabId) {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     
     // Cache the URL
@@ -39,14 +59,13 @@
     
     // Extract and display the video title
     updateStatus('Extracting title...', '#93c5fd');
-    const title = await extractTitle(tab.id);
-    document.getElementById('videoTitle').textContent = title;
+    const title = await extractTitle(tabId);
     cachedData.title = title;
     
     // Extract summary in background
     updateStatus('Extracting summary...', '#93c5fd');
     try {
-      const summary = await extractSummary(tab.id);
+      const summary = await extractSummary(tabId);
       cachedData.summary = summary;
     } catch (error) {
       console.error('Failed to extract summary:', error);
@@ -55,10 +74,10 @@
     
     // Extract transcription in background
     updateStatus('Extracting transcription...', '#93c5fd');
-    const transcription = await extractTranscription(tab.id);
+    const transcription = await extractTranscription(tabId);
     cachedData.transcription = transcription;
     
-    updateStatus('Ready to export (data cached)', '#86efac');
+    updateStatus('Ready to match', '#86efac');
     console.log('Cached data ready:', {
       title: cachedData.title,
       summaryLength: cachedData.summary?.length || 0,

@@ -9,9 +9,13 @@
 <body>
   <div class="popup-container">
     <h1>Popcut AI Matchmaker</h1>
-    <div class="video-info" id="videoInfo">
-      <p class="video-title" id="videoTitle">Loading...</p>
+    
+    <!-- Fathom ID Input -->
+    <div class="fathom-id-container">
+      <label for="fathomIdInput" class="fathom-id-label">Fathom Video ID</label>
+      <input type="text" id="fathomIdInput" class="fathom-id-input" placeholder="Enter or paste Fathom video ID or URL...">
     </div>
+    
     <p class="status-text" id="statusText">Ready to export</p>
     <button id="startMatchingBtn" class="start-matching-btn">Start Matching</button>
     <div class="button-group">

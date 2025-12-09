@@ -3,24 +3,34 @@
 // Handle start matching button click
 async function handleStartMatching(cachedData, WEBHOOK_URL) {
   const startBtn = document.getElementById('startMatchingBtn');
+  const fathomIdInput = document.getElementById('fathomIdInput');
   
   try {
     startBtn.disabled = true;
     
+    // Get Fathom ID from input
+    const fathomId = fathomIdInput.value.trim();
+    if (!fathomId) {
+      showMessage('Please enter a Fathom video ID', 'error');
+      startBtn.disabled = false;
+      return;
+    }
+    
     // Check if we have cached data
     if (!cachedData.title || !cachedData.url) {
-      updateStatus('Extracting data...', '#93c5fd');
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      cachedData.url = tab.url;
-      cachedData.title = await extractTitle(tab.id);
-      cachedData.summary = await extractSummary(tab.id);
-      cachedData.transcription = await extractTranscription(tab.id);
+      updateStatus('Preparing data...', '#93c5fd');
+      // If no cached data, just send the Fathom ID
+      cachedData.url = `https://app.fathom.video/share/${fathomId}`;
+      cachedData.title = cachedData.title || 'Manual submission';
+      cachedData.summary = cachedData.summary || '';
+      cachedData.transcription = cachedData.transcription || '';
     }
 
     updateStatus('Sending to webhook...', '#93c5fd');
 
-    // Prepare payload with cached data
+    // Prepare payload with cached data and Fathom ID
     const payload = {
+      fathomId: fathomId,
       url: cachedData.url,
       title: cachedData.title,
       summary: cachedData.summary,
