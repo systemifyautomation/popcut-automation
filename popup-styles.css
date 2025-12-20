@@ -419,6 +419,29 @@ h1 {
   gap: 12px;
 }
 
+.keywords-section {
+  background: rgba(107, 141, 214, 0.15);
+  border: 1px solid rgba(107, 141, 214, 0.3);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 4px;
+}
+
+.keywords-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(107, 141, 214, 1);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.keywords-list {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.5;
+}
+
 .result-card {
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);

@@ -121,8 +121,8 @@ Edit `config.js` to set your webhook URLs:
 
 ```javascript
 const CONFIG = {
-  WEBHOOK_URL: 'https://n8n.systemify.net/webhook/popcut-matchmaking-start',
-  TRAINING_WEBHOOK_URL: 'https://n8n.systemify.net/webhook-test/popcut-new-instruction-for-AI'
+  WEBHOOK_URL: 'https://n8n.systemifyautomation.com/webhook/popcut-matchmaking-start',
+  TRAINING_WEBHOOK_URL: 'https://n8n.systemifyautomation.com/webhook-test/popcut-new-instruction-for-AI'
 };
 ```
 

@@ -8,6 +8,9 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
   try {
     startBtn.disabled = true;
     
+    // Clear previous results from storage
+    chrome.storage.local.remove('lastMatchResults');
+    
     // Get Fathom ID from input
     const fathomId = fathomIdInput.value.trim();
     if (!fathomId) {
@@ -26,7 +29,7 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
       cachedData.transcription = cachedData.transcription || '';
     }
 
-    updateStatus('Sending to webhook...', '#93c5fd');
+    updateStatus('AI is analyzing...', '#93c5fd');
 
     // Prepare payload with cached data and Fathom ID
     const payload = {
@@ -47,18 +50,37 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
       body: JSON.stringify(payload)
     });
 
-    if (response.ok) {
-      const result = await response.json();
-      
-      updateStatus('Success!', '#86efac');
-      showMessage('Matching complete!', 'success');
-      
-      // Display results if data is returned
-      if (result.data && Array.isArray(result.data) && result.data.length > 0) {
-        displayResults(result.data);
-      }
-    } else {
+    if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    // Check if response is JSON
+    const contentType = response.headers.get('content-type');
+    if (!contentType || !contentType.includes('application/json')) {
+      throw new Error('Server did not return JSON. Check webhook URL.');
+    }
+
+    const result = await response.json();
+    console.log('Matchmaking result:', result);
+    
+    updateStatus('Success!', '#86efac');
+    
+    // Display results if suggestions are returned
+    if (result.suggestions && Array.isArray(result.suggestions) && result.suggestions.length > 0) {
+      displayResults(result.suggestions, result.keywords || []);
+      showMessage('Matching complete! Found ' + result.suggestions.length + ' matches', 'success');
+      
+      // Save results to storage for persistence
+      chrome.storage.local.set({
+        lastMatchResults: {
+          suggestions: result.suggestions,
+          keywords: result.keywords || [],
+          timestamp: new Date().toISOString(),
+          fathomId: fathomId
+        }
+      });
+    } else {
+      showMessage('Matching complete! No matches found', 'warning');
     }
   } catch (error) {
     console.error('Error sending to webhook:', error);
@@ -159,15 +181,26 @@ async function handleSubmitInstruction(TRAINING_WEBHOOK_URL) {
 }
 
 // Display matching results
-function displayResults(data) {
+function displayResults(suggestions, keywords = []) {
   const resultsContainer = document.getElementById('resultsContainer');
   const resultsList = document.getElementById('resultsList');
   
   // Clear previous results
   resultsList.innerHTML = '';
   
-  // Create result cards for each match
-  data.forEach((editor, index) => {
+  // Display keywords if available
+  if (keywords.length > 0) {
+    const keywordsDiv = document.createElement('div');
+    keywordsDiv.className = 'keywords-section';
+    keywordsDiv.innerHTML = `
+      <div class="keywords-label">Keywords (extracted by AI):</div>
+      <div class="keywords-list">${keywords.join(', ')}</div>
+    `;
+    resultsList.appendChild(keywordsDiv);
+  }
+  
+  // Create result cards for each suggestion
+  suggestions.forEach((editor, index) => {
     const card = document.createElement('div');
     card.className = 'result-card';
     
@@ -176,17 +209,34 @@ function displayResults(data) {
       <div class="result-content">
     `;
     
-    // Add all properties from the editor object dynamically
-    for (const [key, value] of Object.entries(editor)) {
-      if (value) {
-        const label = key.charAt(0).toUpperCase() + key.slice(1).replace(/_/g, ' ');
-        cardHTML += `
-          <div class="result-field">
-            <span class="result-label">${label}:</span>
-            <span class="result-value">${value}</span>
-          </div>
-        `;
-      }
+    // Display ID
+    if (editor.id) {
+      cardHTML += `
+        <div class="result-field">
+          <span class="result-label">ID:</span>
+          <span class="result-value">${editor.id}</span>
+        </div>
+      `;
+    }
+    
+    // Display Name
+    if (editor.name) {
+      cardHTML += `
+        <div class="result-field">
+          <span class="result-label">Name:</span>
+          <span class="result-value">${editor.name}</span>
+        </div>
+      `;
+    }
+    
+    // Display Specializations
+    if (editor.specializations && editor.specializations.length > 0) {
+      cardHTML += `
+        <div class="result-field">
+          <span class="result-label">Specializations:</span>
+          <span class="result-value">${editor.specializations.join(', ')}</span>
+        </div>
+      `;
     }
     
     cardHTML += `
@@ -199,6 +249,15 @@ function displayResults(data) {
   
   // Show results container
   resultsContainer.style.display = 'block';
+  
+  // Save to storage for persistence
+  chrome.storage.local.set({
+    lastMatchResults: {
+      suggestions: suggestions,
+      keywords: keywords,
+      timestamp: new Date().toISOString()
+    }
+  });
 }
 
 // Handle close results
@@ -207,6 +266,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (closeResultsBtn) {
     closeResultsBtn.addEventListener('click', () => {
       document.getElementById('resultsContainer').style.display = 'none';
+      // Clear stored results when user closes them
+      chrome.storage.local.remove('lastMatchResults');
     });
   }
 });

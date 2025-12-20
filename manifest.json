@@ -5,11 +5,12 @@
   "description": "AI-powered matchmaking for Popcut from Fathom video calls",
   "permissions": [
     "activeTab",
-    "scripting"
+    "scripting",
+    "storage"
   ],
   "host_permissions": [
     "https://fathom.video/*",
-    "https://n8n.systemify.net/*",
+    "https://n8n.systemifyautomation.com/*",
     "<all_urls>"
   ],
   "action": {

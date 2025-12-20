@@ -19,6 +19,14 @@
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const fathomIdInput = document.getElementById('fathomIdInput');
     
+    // Load and display saved results if they exist
+    chrome.storage.local.get('lastMatchResults', (data) => {
+      if (data.lastMatchResults && data.lastMatchResults.suggestions) {
+        displayResults(data.lastMatchResults.suggestions, data.lastMatchResults.keywords || []);
+        showMessage('Showing previous results', 'info');
+      }
+    });
+    
     // Check if we're on a Fathom page
     if (tab && tab.url && tab.url.includes('fathom.video')) {
       // Extract Fathom ID from URL and auto-fill
