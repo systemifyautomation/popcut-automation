@@ -19,9 +19,30 @@
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     const fathomIdInput = document.getElementById('fathomIdInput');
     
-    // Load and display saved results if they exist
-    chrome.storage.local.get('lastMatchResults', (data) => {
-      if (data.lastMatchResults && data.lastMatchResults.suggestions) {
+    // Check for pending results or errors from background script
+    chrome.storage.local.get(['lastMatchResults', 'pendingResults', 'matchmakingError'], (data) => {
+      // Clear badge when popup opens
+      chrome.action.setBadgeText({ text: '' });
+      
+      // Check for errors first
+      if (data.matchmakingError) {
+        showMessage('Previous matchmaking failed: ' + data.matchmakingError.message, 'error');
+        updateStatus('Error occurred', '#fca5a5');
+        // Clear the error after showing it
+        chrome.storage.local.remove('matchmakingError');
+      }
+      // Then check for results
+      else if (data.pendingResults && data.lastMatchResults && data.lastMatchResults.suggestions) {
+        // New results available - display them
+        displayResults(data.lastMatchResults.suggestions, data.lastMatchResults.keywords || []);
+        showMessage('Matchmaking complete! Found ' + data.lastMatchResults.suggestions.length + ' matches', 'success');
+        updateStatus('Success!', '#86efac');
+        
+        // Clear the pending flag
+        chrome.storage.local.remove('pendingResults');
+      }
+      // Display previous results if they exist (but not pending)
+      else if (data.lastMatchResults && data.lastMatchResults.suggestions) {
         displayResults(data.lastMatchResults.suggestions, data.lastMatchResults.keywords || []);
         showMessage('Showing previous results', 'info');
       }

@@ -9,7 +9,10 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
     startBtn.disabled = true;
     
     // Clear previous results from storage
-    chrome.storage.local.remove('lastMatchResults');
+    chrome.storage.local.remove(['lastMatchResults', 'pendingResults', 'matchmakingError']);
+    
+    // Clear badge
+    chrome.action.setBadgeText({ text: '' });
     
     // Get Fathom ID from input
     const fathomId = fathomIdInput.value.trim();
@@ -30,6 +33,7 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
     }
 
     updateStatus('AI is analyzing...', '#93c5fd');
+    showMessage('Processing matchmaking request... You can close this popup.', 'info');
 
     // Prepare payload with cached data and Fathom ID
     const payload = {
@@ -41,52 +45,61 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
       timestamp: new Date().toISOString()
     };
 
-    // Send directly to webhook
-    const response = await fetch(WEBHOOK_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload)
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    // Check if response is JSON
-    const contentType = response.headers.get('content-type');
-    if (!contentType || !contentType.includes('application/json')) {
-      throw new Error('Server did not return JSON. Check webhook URL.');
-    }
-
-    const result = await response.json();
-    console.log('Matchmaking result:', result);
-    
-    updateStatus('Success!', '#86efac');
-    
-    // Display results if suggestions are returned
-    if (result.suggestions && Array.isArray(result.suggestions) && result.suggestions.length > 0) {
-      displayResults(result.suggestions, result.keywords || []);
-      showMessage('Matching complete! Found ' + result.suggestions.length + ' matches', 'success');
+    // Send request to background script instead of directly to webhook
+    chrome.runtime.sendMessage({
+      action: 'startMatchmaking',
+      data: {
+        payload: payload,
+        webhookUrl: WEBHOOK_URL,
+        fathomId: fathomId
+      }
+    }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.error('Runtime error:', chrome.runtime.lastError);
+        updateStatus('Error occurred', '#fca5a5');
+        showMessage('Error: ' + chrome.runtime.lastError.message, 'error');
+        startBtn.disabled = false;
+        return;
+      }
       
-      // Save results to storage for persistence
-      chrome.storage.local.set({
-        lastMatchResults: {
-          suggestions: result.suggestions,
-          keywords: result.keywords || [],
-          timestamp: new Date().toISOString(),
-          fathomId: fathomId
+      if (!response) {
+        console.error('No response from background');
+        updateStatus('Error occurred', '#fca5a5');
+        showMessage('Error: No response from background script', 'error');
+        startBtn.disabled = false;
+        return;
+      }
+      
+      if (response.success) {
+        const result = response.result;
+        console.log('Matchmaking result:', result);
+        
+        updateStatus('Success!', '#86efac');
+        
+        // Display results if suggestions are returned
+        if (result.suggestions && Array.isArray(result.suggestions) && result.suggestions.length > 0) {
+          displayResults(result.suggestions, result.keywords || []);
+          showMessage('Matching complete! Found ' + result.suggestions.length + ' matches', 'success');
+        } else {
+          showMessage('Matching complete! No matches found', 'warning');
         }
-      });
-    } else {
-      showMessage('Matching complete! No matches found', 'warning');
-    }
+      } else {
+        console.error('Error from background:', response.error);
+        updateStatus('Error occurred', '#fca5a5');
+        showMessage('Error: ' + response.error, 'error');
+      }
+      
+      setTimeout(() => {
+        startBtn.disabled = false;
+        updateStatus('Ready to export', 'rgba(255, 255, 255, 0.8)');
+      }, 2000);
+    });
+    
   } catch (error) {
     console.error('Error sending to webhook:', error);
     updateStatus('Error occurred', '#fca5a5');
     showMessage('Error: ' + error.message, 'error');
-  } finally {
+    
     setTimeout(() => {
       startBtn.disabled = false;
       updateStatus('Ready to export', 'rgba(255, 255, 255, 0.8)');
