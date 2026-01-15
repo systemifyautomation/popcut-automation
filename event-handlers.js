@@ -293,7 +293,7 @@ function displayResults(suggestions, keywords = []) {
     // Display Why Best Fit
     if (editor.why_best_fit) {
       cardHTML += `
-        <div class="result-field">
+        <div class="result-field expanded" data-collapsible>
           <span class="result-label">Why Best Fit</span>
           <div class="result-value result-fit">${editor.why_best_fit}</div>
         </div>
@@ -303,7 +303,7 @@ function displayResults(suggestions, keywords = []) {
     // Display Bio Highlights
     if (editor.bio_highlights) {
       cardHTML += `
-        <div class="result-field">
+        <div class="result-field collapsed" data-collapsible>
           <span class="result-label">Bio Highlights</span>
           <div class="result-value result-highlights">${editor.bio_highlights}</div>
         </div>
@@ -313,7 +313,7 @@ function displayResults(suggestions, keywords = []) {
     // Display Transcription Insights
     if (editor.transcription_insights) {
       cardHTML += `
-        <div class="result-field">
+        <div class="result-field collapsed" data-collapsible>
           <span class="result-label">Client Needs</span>
           <div class="result-value">${editor.transcription_insights}</div>
         </div>
@@ -323,7 +323,7 @@ function displayResults(suggestions, keywords = []) {
     // Display Potential Concerns
     if (editor.potential_concerns) {
       cardHTML += `
-        <div class="result-field">
+        <div class="result-field collapsed" data-collapsible>
           <span class="result-label">Potential Concerns</span>
           <div class="result-value result-concerns">${editor.potential_concerns}</div>
         </div>
@@ -333,7 +333,7 @@ function displayResults(suggestions, keywords = []) {
     // Display Comparison to Others
     if (editor.comparison_to_others) {
       cardHTML += `
-        <div class="result-field">
+        <div class="result-field collapsed" data-collapsible>
           <span class="result-label">Comparison</span>
           <div class="result-value result-comparison">${editor.comparison_to_others}</div>
         </div>
@@ -365,6 +365,20 @@ function displayResults(suggestions, keywords = []) {
     
     card.innerHTML = cardHTML;
     resultsList.appendChild(card);
+  });
+  
+  // Add click handlers for collapsible sections
+  document.querySelectorAll('[data-collapsible] .result-label').forEach(label => {
+    label.addEventListener('click', function() {
+      const field = this.closest('.result-field');
+      if (field.classList.contains('expanded')) {
+        field.classList.remove('expanded');
+        field.classList.add('collapsed');
+      } else {
+        field.classList.remove('collapsed');
+        field.classList.add('expanded');
+      }
+    });
   });
   
   // Show results container
