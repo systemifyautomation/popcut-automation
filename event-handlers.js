@@ -35,6 +35,17 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
     updateStatus('AI is analyzing...', '#93c5fd');
     showMessage('Processing matchmaking request... You can close this popup.', 'info');
 
+    // Store matchmaking in progress state
+    chrome.storage.local.set({
+      matchmakingInProgress: true,
+      matchmakingStartTime: new Date().toISOString()
+    });
+
+    // Start AI analysis animation
+    if (typeof aiLoader !== 'undefined' && aiLoader) {
+      aiLoader.start();
+    }
+
     // Prepare payload with cached data and Fathom ID
     const payload = {
       fathomId: fathomId,
@@ -74,6 +85,18 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
         const result = response.result;
         console.log('Matchmaking result:', result);
         
+        // Clear matchmaking in progress state
+        chrome.storage.local.remove(['matchmakingInProgress', 'matchmakingStartTime']);
+        
+        // Complete the AI animation
+        if (typeof aiLoader !== 'undefined' && aiLoader) {
+          aiLoader.complete();
+          // Wait a bit before hiding to show completion
+          setTimeout(() => {
+            aiLoader.hide();
+          }, 1000);
+        }
+        
         updateStatus('Success!', '#86efac');
         
         // Display results if suggestions are returned
@@ -85,6 +108,15 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
         }
       } else {
         console.error('Error from background:', response.error);
+        
+        // Clear matchmaking in progress state
+        chrome.storage.local.remove(['matchmakingInProgress', 'matchmakingStartTime']);
+        
+        // Hide AI animation on error
+        if (typeof aiLoader !== 'undefined' && aiLoader) {
+          aiLoader.hide();
+        }
+        
         updateStatus('Error occurred', '#fca5a5');
         showMessage('Error: ' + response.error, 'error');
       }
@@ -97,6 +129,15 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
     
   } catch (error) {
     console.error('Error sending to webhook:', error);
+    
+    // Clear matchmaking in progress state
+    chrome.storage.local.remove(['matchmakingInProgress', 'matchmakingStartTime']);
+    
+    // Hide AI animation on error
+    if (typeof aiLoader !== 'undefined' && aiLoader) {
+      aiLoader.hide();
+    }
+    
     updateStatus('Error occurred', '#fca5a5');
     showMessage('Error: ' + error.message, 'error');
     
@@ -217,37 +258,103 @@ function displayResults(suggestions, keywords = []) {
     const card = document.createElement('div');
     card.className = 'result-card';
     
+    // Use rank from data or fallback to index
+    const rank = editor.rank || (index + 1);
+    
     let cardHTML = `
-      <div class="result-rank">#${index + 1}</div>
+      <div class="result-rank">#${rank}</div>
       <div class="result-content">
+        <div class="result-header">
+          <div>
     `;
     
-    // Display ID
+    // Display Editor Name
+    if (editor.editor_name || editor.name) {
+      cardHTML += `
+        <h3 class="result-name">${editor.editor_name || editor.name}</h3>
+      `;
+    }
+    
+    cardHTML += `
+          </div>
+    `;
+    
+    // Display Overall Score
+    if (editor.overall_score !== undefined) {
+      cardHTML += `
+          <div class="result-score">${editor.overall_score}</div>
+      `;
+    }
+    
+    cardHTML += `
+        </div>
+    `;
+    
+    // Display Why Best Fit
+    if (editor.why_best_fit) {
+      cardHTML += `
+        <div class="result-field">
+          <span class="result-label">Why Best Fit</span>
+          <div class="result-value result-fit">${editor.why_best_fit}</div>
+        </div>
+      `;
+    }
+    
+    // Display Bio Highlights
+    if (editor.bio_highlights) {
+      cardHTML += `
+        <div class="result-field">
+          <span class="result-label">Bio Highlights</span>
+          <div class="result-value result-highlights">${editor.bio_highlights}</div>
+        </div>
+      `;
+    }
+    
+    // Display Transcription Insights
+    if (editor.transcription_insights) {
+      cardHTML += `
+        <div class="result-field">
+          <span class="result-label">Client Needs</span>
+          <div class="result-value">${editor.transcription_insights}</div>
+        </div>
+      `;
+    }
+    
+    // Display Potential Concerns
+    if (editor.potential_concerns) {
+      cardHTML += `
+        <div class="result-field">
+          <span class="result-label">Potential Concerns</span>
+          <div class="result-value result-concerns">${editor.potential_concerns}</div>
+        </div>
+      `;
+    }
+    
+    // Display Comparison to Others
+    if (editor.comparison_to_others) {
+      cardHTML += `
+        <div class="result-field">
+          <span class="result-label">Comparison</span>
+          <div class="result-value result-comparison">${editor.comparison_to_others}</div>
+        </div>
+      `;
+    }
+    
+    // Legacy fields support (ID and Specializations)
     if (editor.id) {
       cardHTML += `
         <div class="result-field">
-          <span class="result-label">ID:</span>
-          <span class="result-value">${editor.id}</span>
+          <span class="result-label">Editor ID</span>
+          <div class="result-value">${editor.id}</div>
         </div>
       `;
     }
     
-    // Display Name
-    if (editor.name) {
-      cardHTML += `
-        <div class="result-field">
-          <span class="result-label">Name:</span>
-          <span class="result-value">${editor.name}</span>
-        </div>
-      `;
-    }
-    
-    // Display Specializations
     if (editor.specializations && editor.specializations.length > 0) {
       cardHTML += `
         <div class="result-field">
-          <span class="result-label">Specializations:</span>
-          <span class="result-value">${editor.specializations.join(', ')}</span>
+          <span class="result-label">Specializations</span>
+          <div class="result-value">${editor.specializations.join(', ')}</div>
         </div>
       `;
     }

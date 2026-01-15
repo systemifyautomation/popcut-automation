@@ -20,9 +20,29 @@
     const fathomIdInput = document.getElementById('fathomIdInput');
     
     // Check for pending results or errors from background script
-    chrome.storage.local.get(['lastMatchResults', 'pendingResults', 'matchmakingError'], (data) => {
+    chrome.storage.local.get(['lastMatchResults', 'pendingResults', 'matchmakingError', 'matchmakingInProgress', 'matchmakingStartTime'], (data) => {
       // Clear badge when popup opens
       chrome.action.setBadgeText({ text: '' });
+      
+      // Check if matchmaking is still in progress
+      if (data.matchmakingInProgress) {
+        console.log('Matchmaking still in progress, resuming animation...');
+        updateStatus('AI is analyzing...', '#93c5fd');
+        showMessage('Matchmaking in progress... Please wait.', 'info');
+        
+        // Resume AI animation
+        if (typeof aiLoader !== 'undefined' && aiLoader) {
+          aiLoader.start();
+        }
+        
+        // Disable the start button
+        const startBtn = document.getElementById('startMatchingBtn');
+        if (startBtn) {
+          startBtn.disabled = true;
+        }
+        
+        return; // Don't show results while processing
+      }
       
       // Check for errors first
       if (data.matchmakingError) {

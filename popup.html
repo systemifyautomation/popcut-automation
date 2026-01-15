@@ -36,6 +36,28 @@
       </div>
     </div>
     
+    <!-- AI Analysis Loading Animation -->
+    <div class="ai-analysis-loader" id="aiAnalysisLoader" style="display: none;">
+      <div class="loader-content">
+        <div class="brain-animation">
+          <div class="brain-pulse"></div>
+          <div class="brain-scan"></div>
+          <div class="brain-particles">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+        <h3 class="loader-title">AI Deep Analysis in Progress</h3>
+        <p class="loader-text" id="loaderText">Analyzing transcription...</p>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+    </div>
+
     <!-- Results Display -->
     <div class="results-container" id="resultsContainer" style="display: none;">
       <div class="results-header">
@@ -53,6 +75,7 @@
   <script src="config.js"></script>
   <script src="extractors.js"></script>
   <script src="ui-helpers.js"></script>
+  <script src="ai-loader.js"></script>
   <script src="event-handlers.js"></script>
   <script src="popup.js"></script>
 </body>

@@ -44,16 +44,21 @@ async function handleMatchmaking(data) {
     console.log('Background: Matchmaking result received:', result);
     
     // Store results for the popup
-    if (result.suggestions && Array.isArray(result.suggestions) && result.suggestions.length > 0) {
+    // Handle new 'data' array structure from n8n
+    const editors = result.data || result.suggestions || [];
+    if (editors && Array.isArray(editors) && editors.length > 0) {
       await chrome.storage.local.set({
         lastMatchResults: {
-          suggestions: result.suggestions,
+          suggestions: editors,
           keywords: result.keywords || [],
           timestamp: new Date().toISOString(),
           fathomId: fathomId
         },
         pendingResults: true // Flag to indicate new results are available
       });
+      
+      // Clear matchmaking in progress state
+      await chrome.storage.local.remove(['matchmakingInProgress', 'matchmakingStartTime']);
       
       console.log('Background: Results saved, attempting to open popup...');
       
@@ -72,6 +77,9 @@ async function handleMatchmaking(data) {
     return result;
   } catch (error) {
     console.error('Background: Error in matchmaking:', error);
+    
+    // Clear matchmaking in progress state
+    await chrome.storage.local.remove(['matchmakingInProgress', 'matchmakingStartTime']);
     
     // Store error for display
     await chrome.storage.local.set({
