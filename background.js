@@ -4,11 +4,30 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log('Fathom Video Exporter extension installed');
 });
 
+// Handle notification clicks
+chrome.notifications.onClicked.addListener((notificationId) => {
+  if (notificationId.startsWith('matchmaking-')) {
+    // Clear the notification
+    chrome.notifications.clear(notificationId);
+    // Open the popup by focusing on any tab and then the user can click the icon
+    // Note: We can't programmatically open popup, but we can bring attention to it
+    console.log('Notification clicked - badge will remind user to open popup');
+  }
+});
+
 // Handle messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === 'startMatchmaking') {
-    handleMatchmaking(request.data)
-      .then(result => sendResponse({ success: true, result }))
+    // Start matchmaking asynchronously without waiting for response
+    handleMatchmaking(request.data);
+    // Immediately respond to popup so it doesn't block
+    sendResponse({ success: true, started: true });
+    return false; // Don't keep channel open
+  }
+  
+  if (request.action === 'cancelMatchmaking') {
+    cancelMatchmaking()
+      .then(() => sendResponse({ success: true }))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true; // Keep channel open for async response
   }
@@ -43,10 +62,16 @@ async function handleMatchmaking(data) {
     const result = await response.json();
     console.log('Background: Matchmaking result received:', result);
     
+    // Always clear matchmaking in progress state when we get a response
+    await chrome.storage.local.remove(['matchmakingInProgress', 'matchmakingStartTime']);
+    console.log('Background: Cleared matchmaking in progress state');
+    
     // Store results for the popup
     // Handle new 'data' array structure from n8n
     const editors = result.data || result.suggestions || [];
+    
     if (editors && Array.isArray(editors) && editors.length > 0) {
+      console.log('Background: Storing', editors.length, 'editor results');
       await chrome.storage.local.set({
         lastMatchResults: {
           suggestions: editors,
@@ -57,21 +82,50 @@ async function handleMatchmaking(data) {
         pendingResults: true // Flag to indicate new results are available
       });
       
-      // Clear matchmaking in progress state
-      await chrome.storage.local.remove(['matchmakingInProgress', 'matchmakingStartTime']);
+      console.log('Background: Results saved to storage');
       
-      console.log('Background: Results saved, attempting to open popup...');
+      // Set badge to notify the user
+      chrome.action.setBadgeText({ text: String(editors.length) });
+      chrome.action.setBadgeBackgroundColor({ color: '#86efac' });
+      console.log('Background: Badge set to notify user');
       
-      // Try to open the popup to show results
-      try {
-        await chrome.action.openPopup();
-        console.log('Background: Popup opened successfully');
-      } catch (popupError) {
-        console.log('Background: Could not open popup automatically:', popupError.message);
-        // If we can't open popup, set a badge to notify the user
-        chrome.action.setBadgeText({ text: '!' });
-        chrome.action.setBadgeBackgroundColor({ color: '#86efac' });
-      }
+      // Show notification
+      chrome.notifications.create('matchmaking-success-' + Date.now(), {
+        type: 'basic',
+        iconUrl: 'icon128.png',
+        title: 'Matchmaking Complete!',
+        message: `Found ${editors.length} matching editor${editors.length > 1 ? 's' : ''}. Click the extension icon to view.`,
+        priority: 2,
+        requireInteraction: false
+      });
+      
+      console.log('Background: Notification created');
+    } else {
+      console.log('Background: No editors found in response');
+      // Still store empty results
+      await chrome.storage.local.set({
+        lastMatchResults: {
+          suggestions: [],
+          keywords: result.keywords || [],
+          timestamp: new Date().toISOString(),
+          fathomId: fathomId
+        },
+        pendingResults: true
+      });
+      
+      // Set badge
+      chrome.action.setBadgeText({ text: '0' });
+      chrome.action.setBadgeBackgroundColor({ color: '#fca5a5' });
+      
+      // Show notification
+      chrome.notifications.create('matchmaking-empty-' + Date.now(), {
+        type: 'basic',
+        iconUrl: 'icon128.png',
+        title: 'Matchmaking Complete',
+        message: 'No matching editors found. Click the extension icon to try again.',
+        priority: 1,
+        requireInteraction: false
+      });
     }
     
     return result;
@@ -89,16 +143,38 @@ async function handleMatchmaking(data) {
       }
     });
     
-    // Try to open popup to show error
-    try {
-      await chrome.action.openPopup();
-    } catch (popupError) {
-      console.log('Background: Could not open popup for error:', popupError.message);
-      chrome.action.setBadgeText({ text: 'X' });
-      chrome.action.setBadgeBackgroundColor({ color: '#fca5a5' });
-    }
+    // Set error badge
+    chrome.action.setBadgeText({ text: '✕' });
+    chrome.action.setBadgeBackgroundColor({ color: '#fca5a5' });
+    
+    // Show error notification
+    chrome.notifications.create('matchmaking-error-' + Date.now(), {
+      type: 'basic',
+      iconUrl: 'icon128.png',
+      title: 'Matchmaking Error',
+      message: error.message,
+      priority: 2,
+      requireInteraction: false
+    });
     
     throw error;
   }
 }
 
+// Cancel ongoing matchmaking
+async function cancelMatchmaking() {
+  console.log('Background: Cancelling matchmaking...');
+  
+  // Clear all matchmaking-related storage
+  await chrome.storage.local.remove([
+    'matchmakingInProgress',
+    'matchmakingStartTime',
+    'pendingResults',
+    'matchmakingError'
+  ]);
+  
+  // Clear badge
+  chrome.action.setBadgeText({ text: '' });
+  
+  console.log('Background: Matchmaking cancelled');
+}

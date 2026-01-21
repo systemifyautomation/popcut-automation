@@ -3,10 +3,15 @@
 // Handle start matching button click
 async function handleStartMatching(cachedData, WEBHOOK_URL) {
   const startBtn = document.getElementById('startMatchingBtn');
+  const stopBtn = document.getElementById('stopMatchingBtn');
   const fathomIdInput = document.getElementById('fathomIdInput');
   
   try {
     startBtn.disabled = true;
+    startBtn.style.display = 'none';
+    if (stopBtn) {
+      stopBtn.style.display = 'block';
+    }
     
     // Clear previous results from storage
     chrome.storage.local.remove(['lastMatchResults', 'pendingResults', 'matchmakingError']);
@@ -70,61 +75,32 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
         updateStatus('Error occurred', '#fca5a5');
         showMessage('Error: ' + chrome.runtime.lastError.message, 'error');
         startBtn.disabled = false;
+        startBtn.style.display = 'block';
+        if (stopBtn) {
+          stopBtn.style.display = 'none';
+        }
+        // Clear matchmaking in progress state
+        chrome.storage.local.remove(['matchmakingInProgress', 'matchmakingStartTime']);
         return;
       }
       
-      if (!response) {
-        console.error('No response from background');
+      if (!response || !response.success) {
+        console.error('Failed to start matchmaking');
         updateStatus('Error occurred', '#fca5a5');
-        showMessage('Error: No response from background script', 'error');
+        showMessage('Error: Failed to start matchmaking', 'error');
         startBtn.disabled = false;
+        startBtn.style.display = 'block';
+        if (stopBtn) {
+          stopBtn.style.display = 'none';
+        }
+        // Clear matchmaking in progress state
+        chrome.storage.local.remove(['matchmakingInProgress', 'matchmakingStartTime']);
         return;
       }
       
-      if (response.success) {
-        const result = response.result;
-        console.log('Matchmaking result:', result);
-        
-        // Clear matchmaking in progress state
-        chrome.storage.local.remove(['matchmakingInProgress', 'matchmakingStartTime']);
-        
-        // Complete the AI animation
-        if (typeof aiLoader !== 'undefined' && aiLoader) {
-          aiLoader.complete();
-          // Wait a bit before hiding to show completion
-          setTimeout(() => {
-            aiLoader.hide();
-          }, 1000);
-        }
-        
-        updateStatus('Success!', '#86efac');
-        
-        // Display results if suggestions are returned
-        if (result.suggestions && Array.isArray(result.suggestions) && result.suggestions.length > 0) {
-          displayResults(result.suggestions, result.keywords || []);
-          showMessage('Matching complete! Found ' + result.suggestions.length + ' matches', 'success');
-        } else {
-          showMessage('Matching complete! No matches found', 'warning');
-        }
-      } else {
-        console.error('Error from background:', response.error);
-        
-        // Clear matchmaking in progress state
-        chrome.storage.local.remove(['matchmakingInProgress', 'matchmakingStartTime']);
-        
-        // Hide AI animation on error
-        if (typeof aiLoader !== 'undefined' && aiLoader) {
-          aiLoader.hide();
-        }
-        
-        updateStatus('Error occurred', '#fca5a5');
-        showMessage('Error: ' + response.error, 'error');
-      }
-      
-      setTimeout(() => {
-        startBtn.disabled = false;
-        updateStatus('Ready to export', 'rgba(255, 255, 255, 0.8)');
-      }, 2000);
+      // Matchmaking started successfully in background
+      console.log('Matchmaking started in background');
+      // The results will come via storage events or when popup reopens
     });
     
   } catch (error) {
@@ -143,8 +119,46 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
     
     setTimeout(() => {
       startBtn.disabled = false;
+      startBtn.style.display = 'block';
+      if (stopBtn) {
+        stopBtn.style.display = 'none';
+      }
       updateStatus('Ready to export', 'rgba(255, 255, 255, 0.8)');
     }, 2000);
+  }
+}
+
+// Handle stop matching button click
+async function handleStopMatching() {
+  const startBtn = document.getElementById('startMatchingBtn');
+  const stopBtn = document.getElementById('stopMatchingBtn');
+  
+  try {
+    // Stop animation
+    if (typeof aiLoader !== 'undefined' && aiLoader) {
+      aiLoader.hide();
+    }
+    
+    // Send cancel message to background
+    chrome.runtime.sendMessage({
+      action: 'cancelMatchmaking'
+    }, (response) => {
+      if (response && response.success) {
+        showMessage('Matchmaking cancelled', 'info');
+        updateStatus('Ready for matching', 'rgba(255, 255, 255, 0.8)');
+      }
+    });
+    
+    // Update UI immediately
+    startBtn.disabled = false;
+    startBtn.style.display = 'block';
+    if (stopBtn) {
+      stopBtn.style.display = 'none';
+    }
+    
+  } catch (error) {
+    console.error('Error stopping matchmaking:', error);
+    showMessage('Error: ' + error.message, 'error');
   }
 }
 

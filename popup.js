@@ -21,6 +21,8 @@
     
     // Check for pending results or errors from background script
     chrome.storage.local.get(['lastMatchResults', 'pendingResults', 'matchmakingError', 'matchmakingInProgress', 'matchmakingStartTime'], (data) => {
+      console.log('Popup init - Storage data:', data);
+      
       // Clear badge when popup opens
       chrome.action.setBadgeText({ text: '' });
       
@@ -28,17 +30,22 @@
       if (data.matchmakingInProgress) {
         console.log('Matchmaking still in progress, resuming animation...');
         updateStatus('AI is analyzing...', '#93c5fd');
-        showMessage('Matchmaking in progress... Please wait.', 'info');
+        showMessage('Matchmaking in progress... You can close this popup, it will continue in the background.', 'info');
         
         // Resume AI animation
         if (typeof aiLoader !== 'undefined' && aiLoader) {
           aiLoader.start();
         }
         
-        // Disable the start button
+        // Show stop button instead of start button
         const startBtn = document.getElementById('startMatchingBtn');
+        const stopBtn = document.getElementById('stopMatchingBtn');
         if (startBtn) {
           startBtn.disabled = true;
+          startBtn.style.display = 'none';
+        }
+        if (stopBtn) {
+          stopBtn.style.display = 'block';
         }
         
         return; // Don't show results while processing
@@ -91,7 +98,7 @@
   function extractFathomId(url) {
     try {
       // Match patterns like: fathom.video/share/abcd1234 or https://app.fathom.video/call/abcd1234
-      const match = url.match(/fathom\.video\/(?:share|call)\/([a-zA-Z0-9-]+)/);
+      const match = url.match(/fathom\.video\/(?:share|call)\/([a-zA-Z0-9-_]+)/);
       return match ? match[1] : null;
     } catch (error) {
       console.error('Error extracting Fathom ID:', error);
@@ -138,12 +145,83 @@
   document.getElementById('startMatchingBtn').addEventListener('click', () => {
     handleStartMatching(cachedData, WEBHOOK_URL);
   });
+  
+  document.getElementById('stopMatchingBtn').addEventListener('click', handleStopMatching);
 
   document.getElementById('talkToAiBtn').addEventListener('click', handleTalkToAI);
   document.getElementById('trainAiBtn').addEventListener('click', handleTrainAI);
   document.getElementById('closeTrainingBtn').addEventListener('click', handleCloseTraining);
   document.getElementById('submitInstructionBtn').addEventListener('click', () => {
     handleSubmitInstruction(TRAINING_WEBHOOK_URL);
+  });
+  
+  // Listen for storage changes (results coming in from background)
+  chrome.storage.onChanged.addListener((changes, namespace) => {
+    console.log('Storage changed:', changes, 'namespace:', namespace);
+    
+    if (namespace === 'local') {
+      // Check if results were just added
+      if (changes.pendingResults && changes.pendingResults.newValue === true) {
+        console.log('New results detected from background');
+        
+        // Get the results and display them
+        chrome.storage.local.get(['lastMatchResults'], (data) => {
+          if (data.lastMatchResults && data.lastMatchResults.suggestions) {
+            // Stop animation
+            if (typeof aiLoader !== 'undefined' && aiLoader) {
+              aiLoader.complete();
+              setTimeout(() => {
+                aiLoader.hide();
+              }, 1000);
+            }
+            
+            // Update UI
+            const startBtn = document.getElementById('startMatchingBtn');
+            const stopBtn = document.getElementById('stopMatchingBtn');
+            
+            if (startBtn) {
+              startBtn.disabled = false;
+              startBtn.style.display = 'block';
+            }
+            if (stopBtn) {
+              stopBtn.style.display = 'none';
+            }
+            
+            updateStatus('Success!', '#86efac');
+            displayResults(data.lastMatchResults.suggestions, data.lastMatchResults.keywords || []);
+            showMessage('Matching complete! Found ' + data.lastMatchResults.suggestions.length + ' matches', 'success');
+            
+            // Clear pending flag
+            chrome.storage.local.remove('pendingResults');
+          }
+        });
+      }
+      
+      // Check if error was added
+      if (changes.matchmakingError && changes.matchmakingError.newValue) {
+        console.log('Error detected from background');
+        
+        // Stop animation
+        if (typeof aiLoader !== 'undefined' && aiLoader) {
+          aiLoader.hide();
+        }
+        
+        // Update UI
+        const startBtn = document.getElementById('startMatchingBtn');
+        const stopBtn = document.getElementById('stopMatchingBtn');
+        
+        if (startBtn) {
+          startBtn.disabled = false;
+          startBtn.style.display = 'block';
+        }
+        if (stopBtn) {
+          stopBtn.style.display = 'none';
+        }
+        
+        updateStatus('Error occurred', '#fca5a5');
+        showMessage('Error: ' + changes.matchmakingError.newValue.message, 'error');
+      }
+    }
   });
 
   // Initialize when popup opens

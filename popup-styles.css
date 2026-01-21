@@ -130,6 +130,44 @@ h1 {
   box-shadow: 0 0 0 3px rgba(142, 55, 215, 0.4);
 }
 
+.stop-matching-btn {
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(45deg, rgb(239, 68, 68), rgb(220, 38, 38));
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  transition: all 0.3s ease;
+  font-family: inherit;
+  margin-top: 12px;
+}
+
+.stop-matching-btn:hover:not(:disabled) {
+  background: linear-gradient(45deg, rgb(248, 113, 113), rgb(239, 68, 68));
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+  transform: translateY(-2px);
+}
+
+.stop-matching-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.stop-matching-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.stop-matching-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.4);
+}
+
 .button-group {
   display: flex;
   gap: 8px;
