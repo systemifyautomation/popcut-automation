@@ -30,7 +30,7 @@
       if (data.matchmakingInProgress) {
         console.log('Matchmaking still in progress, resuming animation...');
         updateStatus('AI is analyzing...', '#93c5fd');
-        showMessage('Matchmaking in progress... You can close this popup, it will continue in the background.', 'info');
+        showMessage('Deep analysis in progress (can take 2-3 min). Close this popup and we\'ll notify you when ready!', 'info');
         
         // Resume AI animation
         if (typeof aiLoader !== 'undefined' && aiLoader) {

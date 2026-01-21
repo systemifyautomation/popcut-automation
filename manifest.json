@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Popcut AI Matchmaker",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "AI-powered matchmaking for Popcut from Fathom video calls",
   "permissions": [
     "activeTab",

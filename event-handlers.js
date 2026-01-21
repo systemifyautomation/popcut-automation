@@ -38,7 +38,7 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
     }
 
     updateStatus('AI is analyzing...', '#93c5fd');
-    showMessage('Processing matchmaking request... You can close this popup.', 'info');
+    showMessage('AI analysis started. This may take 2-3 minutes. You can close this popup and multitask - we\'ll notify you when done!', 'info');
 
     // Store matchmaking in progress state
     chrome.storage.local.set({

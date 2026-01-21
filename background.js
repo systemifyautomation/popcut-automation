@@ -1,7 +1,15 @@
 // Background service worker for the Fathom Video Exporter extension
 
+// Prevent service worker from being terminated during long operations
+let activeOperations = 0;
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Fathom Video Exporter extension installed');
+});
+
+// Keep service worker alive
+chrome.runtime.onStartup.addListener(() => {
+  console.log('Service worker started');
 });
 
 // Handle notification clicks
@@ -37,17 +45,41 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 async function handleMatchmaking(data) {
   const { payload, webhookUrl, fathomId } = data;
   
+  // Keep service worker alive by sending periodic pings
+  let keepAliveInterval = null;
+  
+  // Track active operation
+  activeOperations++;
+  
   try {
     console.log('Background: Starting matchmaking request...');
+    console.log('Background: Webhook may take 2-3 minutes to respond...');
+    console.log('Background: Active operations:', activeOperations);
     
-    // Send request to webhook
+    // Set up keep-alive mechanism to prevent service worker suspension
+    keepAliveInterval = setInterval(() => {
+      console.log('Background: Keep-alive ping - worker still active');
+      // Update badge to show we're still processing
+      chrome.action.setBadgeText({ text: '...' });
+    }, 20000); // Ping every 20 seconds
+    
+    // Send request to webhook (no timeout - will wait as long as needed)
     const response = await fetch(webhookUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      keepalive: true // Keep connection alive
     });
+    
+    // Clear keep-alive interval
+    if (keepAliveInterval) {
+      clearInterval(keepAliveInterval);
+      keepAliveInterval = null;
+    }
+    
+    console.log('Background: Response received from webhook');
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
@@ -128,9 +160,23 @@ async function handleMatchmaking(data) {
       });
     }
     
+    // Operation complete
+    activeOperations--;
+    console.log('Background: Operation complete. Active operations:', activeOperations);
+    
     return result;
   } catch (error) {
     console.error('Background: Error in matchmaking:', error);
+    
+    // Operation complete (even with error)
+    activeOperations--;
+    console.log('Background: Operation failed. Active operations:', activeOperations);
+    
+    // Clear keep-alive interval if still running
+    if (keepAliveInterval) {
+      clearInterval(keepAliveInterval);
+      keepAliveInterval = null;
+    }
     
     // Clear matchmaking in progress state
     await chrome.storage.local.remove(['matchmakingInProgress', 'matchmakingStartTime']);

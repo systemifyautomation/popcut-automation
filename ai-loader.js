@@ -1,16 +1,19 @@
 // AI Analysis Loader Controller
 
 const AI_ANALYSIS_STEPS = [
-  { text: "Analyzing transcription structure...", progress: 10 },
-  { text: "Identifying key client requirements...", progress: 20 },
-  { text: "Extracting hidden talent indicators...", progress: 30 },
-  { text: "Evaluating editor specializations...", progress: 40 },
-  { text: "Cross-referencing portfolio experience...", progress: 50 },
-  { text: "Analyzing work history patterns...", progress: 60 },
-  { text: "Calculating compatibility scores...", progress: 70 },
-  { text: "Ranking best-fit candidates...", progress: 80 },
-  { text: "Generating detailed insights...", progress: 90 },
-  { text: "Finalizing recommendations...", progress: 95 }
+  { text: "Analyzing transcription structure...", progress: 5 },
+  { text: "Identifying key client requirements...", progress: 10 },
+  { text: "Extracting hidden talent indicators...", progress: 15 },
+  { text: "Deep-analyzing communication style preferences...", progress: 20 },
+  { text: "Evaluating editor specializations...", progress: 25 },
+  { text: "Cross-referencing portfolio experience...", progress: 35 },
+  { text: "Analyzing work history patterns...", progress: 45 },
+  { text: "Reviewing past client feedback...", progress: 55 },
+  { text: "Calculating compatibility scores...", progress: 65 },
+  { text: "Ranking best-fit candidates...", progress: 75 },
+  { text: "Generating detailed insights...", progress: 85 },
+  { text: "Preparing personalized recommendations...", progress: 92 },
+  { text: "Finalizing match results...", progress: 97 }
 ];
 
 class AIAnalysisLoader {
@@ -27,10 +30,11 @@ class AIAnalysisLoader {
     this.show();
     this.updateStep();
     
-    // Update steps every 2.5 seconds
+    // Update steps every 10-15 seconds to match 2-3 min processing time
+    const stepDuration = 12000; // 12 seconds per step
     this.stepInterval = setInterval(() => {
       this.nextStep();
-    }, 2500);
+    }, stepDuration);
   }
 
   show() {
