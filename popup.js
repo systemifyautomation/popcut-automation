@@ -97,8 +97,11 @@
   // Extract Fathom ID from URL
   function extractFathomId(url) {
     try {
-      // Match patterns like: fathom.video/share/abcd1234 or https://app.fathom.video/call/abcd1234
-      const match = url.match(/fathom\.video\/(?:share|call)\/([a-zA-Z0-9-_]+)/);
+      // Match patterns like: 
+      // - fathom.video/share/ID (public)
+      // - fathom.video/calls/ID (private)
+      // - app.fathom.video/call/ID
+      const match = url.match(/fathom\.video\/(?:share|calls?|call)\/([a-zA-Z0-9-_]+)/);
       return match ? match[1] : null;
     } catch (error) {
       console.error('Error extracting Fathom ID:', error);
