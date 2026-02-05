@@ -186,10 +186,11 @@ async function extractSummary(tabId) {
     if (summary && summary !== 'No summary found') {
       return summary;
     } else {
-      throw new Error('Failed to extract summary - make sure the AI notes are visible on the page');
+      // Summary is optional - continue without it
+      return 'No summary available - proceeding with transcription only';
     }
   } catch (error) {
-    console.error('Error extracting summary:', error);
-    throw error;
+    // Don't throw - summary is optional, just return placeholder
+    return 'No summary available - proceeding with transcription only';
   }
 }

@@ -13,7 +13,7 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
       stopBtn.style.display = 'block';
     }
     
-    // Clear previous results from storage
+    // Clear previous results from storage (currentCallInfo will be overwritten below)
     chrome.storage.local.remove(['lastMatchResults', 'pendingResults', 'matchmakingError']);
     
     // Clear badge
@@ -40,10 +40,17 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
     updateStatus('AI is analyzing...', '#93c5fd');
     showMessage('AI analysis started. This may take 2-3 minutes. You can close this popup and multitask - we\'ll notify you when done!', 'info');
 
-    // Store matchmaking in progress state
+    // Store matchmaking in progress state AND capture call info now
+    const currentCallInfo = {
+      title: cachedData.title,
+      fathomId: fathomId,
+      url: cachedData.url
+    };
+    console.log('Storing currentCallInfo at matchmaking start:', currentCallInfo);
     chrome.storage.local.set({
       matchmakingInProgress: true,
-      matchmakingStartTime: new Date().toISOString()
+      matchmakingStartTime: new Date().toISOString(),
+      currentCallInfo: currentCallInfo
     });
 
     // Start AI analysis animation
@@ -249,12 +256,29 @@ async function handleSubmitInstruction(TRAINING_WEBHOOK_URL) {
 }
 
 // Display matching results
-function displayResults(suggestions, keywords = []) {
+function displayResults(suggestions, keywords = [], callInfo = {}) {
   const resultsContainer = document.getElementById('resultsContainer');
   const resultsList = document.getElementById('resultsList');
   
+  console.log('displayResults called with callInfo:', callInfo);
+  
   // Clear previous results
   resultsList.innerHTML = '';
+  
+  // Always display call information header if we have callInfo object
+  // Even if title/fathomId might be undefined, we'll show what we have
+  const callInfoDiv = document.createElement('div');
+  callInfoDiv.className = 'call-info-header';
+  callInfoDiv.innerHTML = `
+    <div class="call-info-content">
+      <div class="call-info-icon">📹</div>
+      <div class="call-info-details">
+        <div class="call-info-title">${callInfo.title || callInfo.callTitle || 'Untitled Call'}</div>
+        <div class="call-info-id" style="color: white;">${callInfo.fathomId || 'Unknown'}</div>
+      </div>
+    </div>
+  `;
+  resultsList.appendChild(callInfoDiv);
   
   // Display keywords if available
   if (keywords.length > 0) {
@@ -398,13 +422,20 @@ function displayResults(suggestions, keywords = []) {
   // Show results container
   resultsContainer.style.display = 'block';
   
-  // Save to storage for persistence
-  chrome.storage.local.set({
-    lastMatchResults: {
-      suggestions: suggestions,
-      keywords: keywords,
-      timestamp: new Date().toISOString()
-    }
+  // Update storage with call info preserved
+  chrome.storage.local.get(['lastMatchResults'], (data) => {
+    const existing = data.lastMatchResults || {};
+    chrome.storage.local.set({
+      lastMatchResults: {
+        suggestions: suggestions,
+        keywords: keywords,
+        timestamp: existing.timestamp || new Date().toISOString(),
+        // Preserve call info from background script
+        callTitle: callInfo.title || callInfo.callTitle || existing.callTitle,
+        fathomId: callInfo.fathomId || existing.fathomId,
+        callUrl: callInfo.url || callInfo.callUrl || existing.callUrl
+      }
+    });
   });
 }
 
@@ -414,8 +445,17 @@ document.addEventListener('DOMContentLoaded', () => {
   if (closeResultsBtn) {
     closeResultsBtn.addEventListener('click', () => {
       document.getElementById('resultsContainer').style.display = 'none';
-      // Clear stored results when user closes them
-      chrome.storage.local.remove('lastMatchResults');
     });
+  }
+  
+  // Helper function to extract Fathom ID (duplicated for use in event handler)
+  function extractFathomId(url) {
+    try {
+      const match = url.match(/fathom\.video\/(?:share|calls?|call)\/([a-zA-Z0-9-_]+)/);
+      return match ? match[1] : null;
+    } catch (error) {
+      console.error('Error extracting Fathom ID:', error);
+      return null;
+    }
   }
 });

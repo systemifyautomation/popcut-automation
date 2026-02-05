@@ -61,7 +61,14 @@
       // Then check for results
       else if (data.pendingResults && data.lastMatchResults && data.lastMatchResults.suggestions) {
         // New results available - display them
-        displayResults(data.lastMatchResults.suggestions, data.lastMatchResults.keywords || []);
+        console.log('Displaying new results. lastMatchResults:', data.lastMatchResults);
+        const callInfo = {
+          title: data.lastMatchResults.callTitle,
+          fathomId: data.lastMatchResults.fathomId,
+          url: data.lastMatchResults.callUrl
+        };
+        console.log('Created callInfo:', callInfo);
+        displayResults(data.lastMatchResults.suggestions, data.lastMatchResults.keywords || [], callInfo);
         showMessage('Matchmaking complete! Found ' + data.lastMatchResults.suggestions.length + ' matches', 'success');
         updateStatus('Success!', '#86efac');
         
@@ -70,28 +77,35 @@
       }
       // Display previous results if they exist (but not pending)
       else if (data.lastMatchResults && data.lastMatchResults.suggestions) {
-        displayResults(data.lastMatchResults.suggestions, data.lastMatchResults.keywords || []);
+        console.log('Displaying previous results. lastMatchResults:', data.lastMatchResults);
+        const callInfo = {
+          title: data.lastMatchResults.callTitle,
+          fathomId: data.lastMatchResults.fathomId,
+          url: data.lastMatchResults.callUrl
+        };
+        console.log('Created callInfo:', callInfo);
+        displayResults(data.lastMatchResults.suggestions, data.lastMatchResults.keywords || [], callInfo);
         showMessage('Showing previous results', 'info');
       }
-    });
-    
-    // Check if we're on a Fathom page
-    if (tab && tab.url && tab.url.includes('fathom.video')) {
-      // Extract Fathom ID from URL and auto-fill
-      const fathomId = extractFathomId(tab.url);
-      if (fathomId) {
-        fathomIdInput.value = fathomId;
-        updateStatus('Fathom ID auto-filled', '#86efac');
-        
-        // Cache the URL
-        cachedData.url = tab.url;
-        
-        // Auto-extract data from current page
-        await extractDataFromPage(tab.id);
+      
+      // Always auto-fill from current tab if on Fathom page
+      if (tab && tab.url && tab.url.includes('fathom.video')) {
+        // Extract Fathom ID from URL and auto-fill
+        const fathomId = extractFathomId(tab.url);
+        if (fathomId) {
+          fathomIdInput.value = fathomId;
+          updateStatus('Fathom ID auto-filled', '#86efac');
+          
+          // Cache the URL
+          cachedData.url = tab.url;
+          
+          // Auto-extract data from current page
+          extractDataFromPage(tab.id);
+        }
+      } else {
+        updateStatus('Ready - enter Fathom ID to start', '#93c5fd');
       }
-    } else {
-      updateStatus('Ready - enter Fathom ID to start', '#93c5fd');
-    }
+    });
   }
   
   // Extract Fathom ID from URL
@@ -191,7 +205,14 @@
             }
             
             updateStatus('Success!', '#86efac');
-            displayResults(data.lastMatchResults.suggestions, data.lastMatchResults.keywords || []);
+            console.log('Storage listener - lastMatchResults:', data.lastMatchResults);
+            const callInfo = {
+              title: data.lastMatchResults.callTitle,
+              fathomId: data.lastMatchResults.fathomId,
+              url: data.lastMatchResults.callUrl
+            };
+            console.log('Storage listener - callInfo:', callInfo);
+            displayResults(data.lastMatchResults.suggestions, data.lastMatchResults.keywords || [], callInfo);
             showMessage('Matching complete! Found ' + data.lastMatchResults.suggestions.length + ' matches', 'success');
             
             // Clear pending flag

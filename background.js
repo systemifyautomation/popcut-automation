@@ -94,8 +94,13 @@ async function handleMatchmaking(data) {
     const result = await response.json();
     console.log('Background: Matchmaking result received:', result);
     
-    // Always clear matchmaking in progress state when we get a response
-    await chrome.storage.local.remove(['matchmakingInProgress', 'matchmakingStartTime']);
+    // Get the call info that was stored when matchmaking started
+    const storageData = await chrome.storage.local.get(['currentCallInfo']);
+    const callInfo = storageData.currentCallInfo || {};
+    console.log('Background: Using stored call info:', callInfo);
+    
+    // Clear matchmaking in progress state and currentCallInfo (we'll save it to lastMatchResults)
+    await chrome.storage.local.remove(['matchmakingInProgress', 'matchmakingStartTime', 'currentCallInfo']);
     console.log('Background: Cleared matchmaking in progress state');
     
     // Store results for the popup
@@ -104,13 +109,22 @@ async function handleMatchmaking(data) {
     
     if (editors && Array.isArray(editors) && editors.length > 0) {
       console.log('Background: Storing', editors.length, 'editor results');
+      const resultsToStore = {
+        suggestions: editors,
+        keywords: result.keywords || [],
+        timestamp: new Date().toISOString(),
+        // Use call_id and call_name from webhook response, fallback to stored data
+        fathomId: result.call_id || callInfo.fathomId || fathomId,
+        callTitle: result.call_name || callInfo.title || 'Untitled Call',
+        callUrl: callInfo.url
+      };
+      console.log('Background: Storing lastMatchResults with call info:', {
+        fathomId: resultsToStore.fathomId,
+        callTitle: resultsToStore.callTitle,
+        callUrl: resultsToStore.callUrl
+      });
       await chrome.storage.local.set({
-        lastMatchResults: {
-          suggestions: editors,
-          keywords: result.keywords || [],
-          timestamp: new Date().toISOString(),
-          fathomId: fathomId
-        },
+        lastMatchResults: resultsToStore,
         pendingResults: true // Flag to indicate new results are available
       });
       
@@ -140,7 +154,10 @@ async function handleMatchmaking(data) {
           suggestions: [],
           keywords: result.keywords || [],
           timestamp: new Date().toISOString(),
-          fathomId: fathomId
+          // Use call_id and call_name from webhook response, fallback to stored data
+          fathomId: result.call_id || callInfo.fathomId || fathomId,
+          callTitle: result.call_name || callInfo.title || 'Untitled Call',
+          callUrl: callInfo.url
         },
         pendingResults: true
       });
