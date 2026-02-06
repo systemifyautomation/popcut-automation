@@ -5,6 +5,7 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
   const startBtn = document.getElementById('startMatchingBtn');
   const stopBtn = document.getElementById('stopMatchingBtn');
   const fathomIdInput = document.getElementById('fathomIdInput');
+  const topMatchesSlider = document.getElementById('topMatchesSlider');
   
   try {
     startBtn.disabled = true;
@@ -26,6 +27,9 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
       startBtn.disabled = false;
       return;
     }
+    
+    // Get top matches value from slider
+    const topMatches = parseInt(topMatchesSlider.value) || 5;
     
     // Check if we have cached data
     if (!cachedData.title || !cachedData.url) {
@@ -65,6 +69,7 @@ async function handleStartMatching(cachedData, WEBHOOK_URL) {
       title: cachedData.title,
       summary: cachedData.summary,
       transcription: cachedData.transcription,
+      topMatches: topMatches,
       timestamp: new Date().toISOString()
     };
 

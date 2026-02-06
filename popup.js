@@ -172,6 +172,13 @@
     handleSubmitInstruction(TRAINING_WEBHOOK_URL);
   });
   
+  // Update slider value display
+  const topMatchesSlider = document.getElementById('topMatchesSlider');
+  const topMatchesValue = document.getElementById('topMatchesValue');
+  topMatchesSlider.addEventListener('input', (e) => {
+    topMatchesValue.textContent = e.target.value;
+  });
+  
   // Listen for storage changes (results coming in from background)
   chrome.storage.onChanged.addListener((changes, namespace) => {
     console.log('Storage changed:', changes, 'namespace:', namespace);

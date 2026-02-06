@@ -16,6 +16,15 @@
       <input type="text" id="fathomIdInput" class="fathom-id-input" placeholder="Enter or paste Fathom video ID or URL...">
     </div>
     
+    <!-- Top Matches Slider -->
+    <div class="top-matches-container">
+      <div class="top-matches-header">
+        <label for="topMatchesSlider" class="top-matches-label">Top Matches</label>
+        <span id="topMatchesValue" class="top-matches-value">5</span>
+      </div>
+      <input type="range" id="topMatchesSlider" class="top-matches-slider" min="1" max="10" value="5">
+    </div>
+    
     <p class="status-text" id="statusText">Ready for matching</p>
     <button id="startMatchingBtn" class="start-matching-btn">Start Matching</button>
     <button id="stopMatchingBtn" class="stop-matching-btn" style="display: none;">Stop Matching</button>
