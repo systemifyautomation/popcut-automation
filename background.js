@@ -113,10 +113,10 @@ async function handleMatchmaking(data) {
         suggestions: editors,
         keywords: result.keywords || [],
         timestamp: new Date().toISOString(),
-        // Use call_id and call_name from webhook response, fallback to stored data
+        // Use call_id, call_name, and call_url from webhook response, fallback to stored data
         fathomId: result.call_id || callInfo.fathomId || fathomId,
         callTitle: result.call_name || callInfo.title || 'Untitled Call',
-        callUrl: callInfo.url
+        callUrl: result.call_url || callInfo.url
       };
       console.log('Background: Storing lastMatchResults with call info:', {
         fathomId: resultsToStore.fathomId,
@@ -154,10 +154,10 @@ async function handleMatchmaking(data) {
           suggestions: [],
           keywords: result.keywords || [],
           timestamp: new Date().toISOString(),
-          // Use call_id and call_name from webhook response, fallback to stored data
+          // Use call_id, call_name, and call_url from webhook response, fallback to stored data
           fathomId: result.call_id || callInfo.fathomId || fathomId,
           callTitle: result.call_name || callInfo.title || 'Untitled Call',
-          callUrl: callInfo.url
+          callUrl: result.call_url || callInfo.url
         },
         pendingResults: true
       });

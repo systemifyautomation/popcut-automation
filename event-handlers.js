@@ -269,12 +269,14 @@ function displayResults(suggestions, keywords = [], callInfo = {}) {
   // Even if title/fathomId might be undefined, we'll show what we have
   const callInfoDiv = document.createElement('div');
   callInfoDiv.className = 'call-info-header';
+  const callUrl = callInfo.url || callInfo.callUrl;
+  const callTitle = callInfo.title || callInfo.callTitle || 'Untitled Call';
+  
   callInfoDiv.innerHTML = `
     <div class="call-info-content">
       <div class="call-info-icon">📹</div>
       <div class="call-info-details">
-        <div class="call-info-title">${callInfo.title || callInfo.callTitle || 'Untitled Call'}</div>
-        <div class="call-info-id" style="color: white;">${callInfo.fathomId || 'Unknown'}</div>
+        ${callUrl ? `<a href="${callUrl}" target="_blank" class="call-info-title" style="color: white; text-decoration: underline; cursor: pointer;">${callTitle}</a>` : `<div class="call-info-title">${callTitle}</div>`}
       </div>
     </div>
   `;
