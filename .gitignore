@@ -1,0 +1,23 @@
+# Webhook configuration (security)
+webhook-config.js
+config.js
+
+# Test files
+test-page.html
+
+# Node modules
+node_modules/
+
+# Build artifacts
+dist/
+build/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

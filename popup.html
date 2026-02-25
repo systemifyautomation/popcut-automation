@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Popcut AI Matchmaker</title>
+  <link rel="stylesheet" href="popup-styles.css">
+</head>
+<body>
+  <div class="popup-container">
+    <h1>Popcut AI Matchmaker</h1>
+    
+    <!-- Fathom ID Input -->
+    <div class="fathom-id-container">
+      <label for="fathomIdInput" class="fathom-id-label">Fathom Video ID</label>
+      <input type="text" id="fathomIdInput" class="fathom-id-input" placeholder="Enter or paste Fathom video ID or URL...">
+    </div>
+    
+    <!-- Top Matches Slider -->
+    <div class="top-matches-container">
+      <div class="top-matches-header">
+        <label for="topMatchesSlider" class="top-matches-label">Top Matches</label>
+        <span id="topMatchesValue" class="top-matches-value">5</span>
+      </div>
+      <input type="range" id="topMatchesSlider" class="top-matches-slider" min="1" max="10" value="5">
+    </div>
+    
+    <p class="status-text" id="statusText">Ready for matching</p>
+    <button id="startMatchingBtn" class="start-matching-btn">Start Matching</button>
+    <button id="stopMatchingBtn" class="stop-matching-btn" style="display: none;">Stop Matching</button>
+    <div class="button-group">
+      <button id="talkToAiBtn" class="action-btn talk-btn">Talk to the AI</button>
+      <button id="trainAiBtn" class="action-btn train-btn">Train the AI</button>
+    </div>
+    
+    <!-- Training Interface -->
+    <div class="training-interface" id="trainingInterface" style="display: none;">
+      <div class="training-header">
+        <h2>Train the AI</h2>
+        <button id="closeTrainingBtn" class="close-btn">×</button>
+      </div>
+      <textarea id="instructionInput" class="instruction-input" placeholder="Enter AI training instructions..."></textarea>
+      <div class="training-actions">
+        <button id="submitInstructionBtn" class="submit-instruction-btn">Submit Instruction</button>
+        <a href="https://docs.google.com/spreadsheets/d/1-EZzrxsueIHSfqZwDA0dGlHAB3fE3GTdsoD5lELKl20/edit?usp=sharing" target="_blank" id="viewInstructionsBtn" class="view-instructions-btn">View All Instructions</a>
+      </div>
+    </div>
+    
+    <!-- AI Analysis Loading Animation -->
+    <div class="ai-analysis-loader" id="aiAnalysisLoader" style="display: none;">
+      <div class="loader-content">
+        <div class="brain-animation">
+          <div class="brain-pulse"></div>
+          <div class="brain-scan"></div>
+          <div class="brain-particles">
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+        <h3 class="loader-title">AI Deep Analysis in Progress</h3>
+        <p class="loader-text" id="loaderText">Analyzing transcription...</p>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Results Display -->
+    <div class="results-container" id="resultsContainer" style="display: none;">
+      <div class="results-header">
+        <h2>Top Matches</h2>
+        <button id="closeResultsBtn" class="close-btn">×</button>
+      </div>
+      <div class="results-list" id="resultsList"></div>
+    </div>
+    
+    <div class="message" id="message"></div>
+    <div class="footer">
+      <p class="footer-text">© 2025 <a href="https://systemifyautomation.com" target="_blank" class="made-by">Made by Systemify Automation</a></p>
+    </div>
+  </div>
+  <script src="config.js"></script>
+  <script src="extractors.js"></script>
+  <script src="ui-helpers.js"></script>
+  <script src="ai-loader.js"></script>
+  <script src="event-handlers.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
